@@ -4,19 +4,22 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardContent } from "@/components/dashboard-content"
 import { CryptoDataProvider } from "@/components/crypto-data-provider"
 import { TabProvider } from "@/hooks/use-tab-context"
+import { AuthGuard } from "@/components/auth-guard"
 
 export default function Dashboard() {
   return (
-    <CryptoDataProvider>
-      <TabProvider>
-        <SidebarProvider>
-          <div className="flex h-screen w-full overflow-hidden bg-background">
-            <DashboardSidebar />
-            <DashboardContent />
-          </div>
-        </SidebarProvider>
-      </TabProvider>
-    </CryptoDataProvider>
+    <AuthGuard>
+      <CryptoDataProvider>
+        <TabProvider>
+          <SidebarProvider>
+            <div className="flex h-screen w-full overflow-hidden bg-background">
+              <DashboardSidebar />
+              <DashboardContent />
+            </div>
+          </SidebarProvider>
+        </TabProvider>
+      </CryptoDataProvider>
+    </AuthGuard>
   )
 }
 

@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-options"
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userId = session.user.id
+
+    // Get transactions from request body
     const { transactions } = await request.json()
 
     if (!Array.isArray(transactions) || transactions.length === 0) {
@@ -53,6 +63,7 @@ export async function POST(request: Request) {
                 symbol: tx.Pairs,
                 base_currency: baseCurrency || "UNKNOWN",
                 quote_currency: quoteCurrency || "USDT",
+                user_id: userId
               })
               .select("id")
               .single()
@@ -98,6 +109,7 @@ export async function POST(request: Request) {
               total: tx.Total,
               fee: tx.Fee || 0,
               role: tx.Role || "Unknown",
+              user_id: userId
             })
 
             if (insertTxError) {
@@ -111,25 +123,35 @@ export async function POST(request: Request) {
             console.error("Failed to get pair ID")
             results.push({ status: "error", transaction: tx, error: "Failed to get pair ID" })
           }
-        } catch (txError) {
-          console.error("Error processing transaction:", txError)
-          results.push({ status: "error", transaction: tx, error: txError })
+        } catch (error) {
+          console.error("Error processing transaction:", error)
+          results.push({
+            status: "error",
+            transaction: tx,
+            error: error instanceof Error ? error.message : "Unknown error",
+          })
         }
       }
     }
 
+    // Calculate statistics
     const successCount = results.filter((r) => r.status === "success").length
     const errorCount = results.filter((r) => r.status === "error").length
     const skippedCount = results.filter((r) => r.status === "skipped").length
 
     return NextResponse.json({
       success: true,
-      message: `Processed ${transactions.length} transactions: ${successCount} successful, ${errorCount} failed, ${skippedCount} skipped`,
-      results,
+      results: results,
+      stats: {
+        total: transactions.length,
+        success: successCount,
+        errors: errorCount,
+        skipped: skippedCount,
+      },
     })
   } catch (error) {
-    console.error("Error saving transactions:", error)
-    return NextResponse.json({ error: "Failed to save transactions", details: error }, { status: 500 })
+    console.error("Error in save-transactions API:", error)
+    return NextResponse.json({ error: "Failed to save transactions" }, { status: 500 })
   }
 }
 

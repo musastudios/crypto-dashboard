@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import Papa from "papaparse"
 import { supabase } from "@/lib/supabase"
+import { useSession } from "next-auth/react"
 
 type Transaction = {
   id?: number
@@ -80,6 +81,8 @@ type CryptoDataContextType = {
 const CryptoDataContext = createContext<CryptoDataContextType | undefined>(undefined)
 
 export function CryptoDataProvider({ children }: { children: ReactNode }) {
+  const { data: session } = useSession()
+  const userId = session?.user?.id
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [activePair, setActivePair] = useState<string | null>(null)
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
@@ -149,6 +152,11 @@ export function CryptoDataProvider({ children }: { children: ReactNode }) {
 
       if (pairSymbol) {
         query = query.eq("trading_pairs.symbol", pairSymbol)
+      }
+
+      // Filter by user_id if available
+      if (userId) {
+        query = query.eq("user_id", userId)
       }
 
       const { data, error } = await query
@@ -353,7 +361,10 @@ export function CryptoDataProvider({ children }: { children: ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ transactions }),
+        body: JSON.stringify({ 
+          transactions,
+          userId
+        }),
       })
 
       const result = await response.json()

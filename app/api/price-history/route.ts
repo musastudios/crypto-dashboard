@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-options"
 
 export async function GET(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    
     const url = new URL(request.url)
     const pairSymbol = url.searchParams.get("pair")
     const limit = Number.parseInt(url.searchParams.get("limit") || "100")
@@ -23,13 +27,20 @@ export async function GET(request: Request) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
-    const { data, error, count } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("price_history")
       .select("*", { count: "exact" })
       .eq("pair_id", pairData.id)
       .gte("timestamp", startDate.toISOString())
       .order("timestamp", { ascending: false })
       .range(offset, offset + limit - 1)
+    
+    // If authenticated, filter by user_id
+    if (session?.user?.id) {
+      query = query.or(`user_id.eq.${session.user.id},user_id.is.null`)
+    }
+
+    const { data, error, count } = await query
 
     if (error) {
       console.error("Error fetching price history:", error)
@@ -50,6 +61,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    // Require authentication for creating price history
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
     const { pair_symbol, price, timestamp, source } = await request.json()
 
     if (!pair_symbol || !price) {
@@ -75,6 +93,7 @@ export async function POST(request: Request) {
         price,
         timestamp: timestamp || new Date().toISOString(),
         source: source || "manual",
+        user_id: session.user.id
       })
       .select()
       .single()
