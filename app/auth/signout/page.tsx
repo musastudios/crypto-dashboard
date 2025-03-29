@@ -50,7 +50,12 @@ function SignOutContent() {
 
 export default function SignOutPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">Loading...</h2>
+        <p>Please wait while we prepare sign-out options</p>
+      </div>
+    </div>}>
       <SignOutContent />
     </Suspense>
   );

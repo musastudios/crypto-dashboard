@@ -1,15 +1,34 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
-import { Suspense } from "react";
 
+// Client component that uses useSearchParams
 function ErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+
+  const errorMessages = {
+    Configuration: "There is a problem with the server configuration.",
+    AccessDenied: "You do not have permission to sign in.",
+    Verification: "The verification token has expired or has already been used.",
+    OAuthSignin: "Error starting the sign in process. Please try again.",
+    OAuthCallback: "Error completing the sign in process. Please try again.",
+    OAuthCreateAccount: "Error creating your account. Please try again.",
+    EmailCreateAccount: "Error creating your account. Please try again.",
+    Callback: "An unexpected error occurred when signing you in. Please try again.",
+    OAuthAccountNotLinked: "This email is already associated with another provider.",
+    EmailSignin: "The email could not be sent. Please try again.",
+    CredentialsSignin: "The credentials you provided are invalid. Please try again.",
+    SessionRequired: "You must be signed in to access this page.",
+    Default: "An unexpected error occurred. Please try again."
+  };
+
+  const errorMessage = error ? errorMessages[error as keyof typeof errorMessages] || errorMessages.Default : errorMessages.Default;
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -25,19 +44,7 @@ function ErrorContent() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="rounded-md bg-destructive/15 p-4 text-sm text-destructive">
-            {error === "Configuration" && "There is a problem with the server configuration."}
-            {error === "AccessDenied" && "You do not have permission to sign in."}
-            {error === "Verification" && "The verification token has expired or has already been used."}
-            {error === "OAuthSignin" && "Error starting the sign in process. Please try again."}
-            {error === "OAuthCallback" && "Error completing the sign in process. Please try again."}
-            {error === "OAuthCreateAccount" && "Error creating your account. Please try again."}
-            {error === "EmailCreateAccount" && "Error creating your account. Please try again."}
-            {error === "Callback" && "An unexpected error occurred when signing you in. Please try again."}
-            {error === "OAuthAccountNotLinked" && "This email is already associated with another provider."}
-            {error === "EmailSignin" && "The email could not be sent. Please try again."}
-            {error === "CredentialsSignin" && "The credentials you provided are invalid. Please try again."}
-            {error === "SessionRequired" && "You must be signed in to access this page."}
-            {error === "Default" || !error && "An unexpected error occurred. Please try again."}
+            {errorMessage}
           </div>
         </CardContent>
         <CardFooter>
@@ -52,9 +59,14 @@ function ErrorContent() {
   );
 }
 
-export default function AuthError() {
+export default function ErrorPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">Loading...</h2>
+        <p>Please wait while we process your request</p>
+      </div>
+    </div>}>
       <ErrorContent />
     </Suspense>
   );
