@@ -1,27 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CandlestickChart } from "lucide-react";
 
-export default function SignIn() {
-  const router = useRouter();
+// Client component that uses useSearchParams
+function SignInContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const error = searchParams.get("error");
 
-  // Auto-redirect to Google sign-in
   useEffect(() => {
-    if (!error) {
-      const timer = setTimeout(() => {
-        signIn("google", { callbackUrl });
-      }, 3000);
-      return () => clearTimeout(timer);
+    if (error) {
+      console.error("Authentication error:", error);
     }
-  }, [callbackUrl, error]);
+  }, [error]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -36,12 +32,9 @@ export default function SignIn() {
           </CardDescription>
           {error && (
             <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-              {error === "OAuthSignin" && "Error starting the sign in process. Please try again."}
-              {error === "OAuthCallback" && "Error completing the sign in process. Please try again."}
-              {error === "OAuthAccountNotLinked" && "This account is already linked to another provider."}
-              {error === "Callback" && "Invalid callback URL. Please try again."}
-              {error === "AccessDenied" && "You do not have permission to sign in."}
-              {error === "default" && "An unknown error occurred. Please try again."}
+              {error === "OAuthAccountNotLinked"
+                ? "This account is already linked to another provider."
+                : "An error occurred during sign in. Please try again."}
             </div>
           )}
         </CardHeader>
@@ -85,5 +78,13 @@ export default function SignIn() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignInContent />
+    </Suspense>
   );
 } 

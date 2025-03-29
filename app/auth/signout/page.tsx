@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut } from "lucide-react";
 
-export default function SignOut() {
+// Client component that uses useSearchParams
+function SignOutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -44,5 +45,13 @@ export default function SignOut() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function SignOutPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignOutContent />
+    </Suspense>
   );
 } 
