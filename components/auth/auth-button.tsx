@@ -13,10 +13,13 @@ import { useAuth } from "@/components/auth-provider";
 import { signInWithGoogle, signInWithTwitter, signOut } from "@/lib/supabase-auth";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function AuthButton() {
   const { user, isLoading } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const router = useRouter();
 
   const handleSignIn = async (provider: 'google' | 'twitter') => {
     setIsSigningIn(true);
@@ -35,11 +38,21 @@ export function AuthButton() {
   };
 
   const handleSignOut = async () => {
+    setIsSigningOut(true);
     try {
-      await signOut();
+      const result = await signOut();
+      if (result.success) {
+        // Force router refresh to update auth state
+        router.refresh();
+        // Redirect to home page
+        router.push("/");
+        toast.success("Successfully signed out");
+      }
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.");
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -80,9 +93,9 @@ export function AuthButton() {
           <DropdownMenuItem className="text-muted-foreground">
             <span className="text-xs">{user.email}</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+          <DropdownMenuItem onClick={handleSignOut} className="text-destructive" disabled={isSigningOut}>
             <LogOut className="mr-2 h-4 w-4" />
-            <span>Sign out</span>
+            <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

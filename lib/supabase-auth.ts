@@ -57,7 +57,9 @@ export const signOut = async () => {
     throw error;
   }
   
-  return redirect("/");
+  // Instead of using redirect, we'll return a success status
+  // The component can handle navigation after sign out
+  return { success: true };
 };
 
 export const getUser = async () => {

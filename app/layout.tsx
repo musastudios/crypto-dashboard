@@ -5,13 +5,14 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
 import { Toaster } from "sonner"
+import { AuthStatusDebug } from "@/components/auth-status-debug"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Crypto Trading Analytics",
   description: "Analyze your crypto trading data with powerful visualization tools",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -26,13 +27,10 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
             {children}
             <Toaster position="top-right" />
+            <AuthStatusDebug />
           </ThemeProvider>
         </AuthProvider>
       </body>
     </html>
   )
 }
-
-
-
-import './globals.css'

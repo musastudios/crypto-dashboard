@@ -18,8 +18,14 @@ export default function SignOutContent() {
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
-      await signOut();
-      // Redirect handled by signOut function
+      const result = await signOut();
+      if (result.success) {
+        // Force router refresh to update auth state
+        router.refresh();
+        // Redirect to home page
+        router.push("/");
+        toast.success("Successfully signed out");
+      }
     } catch (error) {
       console.error("Sign out failed:", error);
       toast.error("Failed to sign out. Please try again.");
