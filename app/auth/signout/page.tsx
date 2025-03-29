@@ -1,62 +1,23 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut } from "lucide-react";
+import dynamic from "next/dynamic";
 
-// Client component that uses useSearchParams
-function SignOutContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
-
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl });
-  };
-
-  const handleCancel = () => {
-    router.push(callbackUrl);
-  };
-
-  return (
-    <div className="flex h-screen w-full items-center justify-center bg-background">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
-            <LogOut className="h-10 w-10 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Sign Out</CardTitle>
-          <CardDescription>
-            Are you sure you want to sign out?
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Button onClick={handleCancel} variant="outline">
-              Cancel
-            </Button>
-            <Button onClick={handleSignOut} variant="destructive">
-              Sign Out
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+// Dynamically import the component that uses useSearchParams with SSR disabled
+const SignOutContentWithSearchParams = dynamic(
+  () => import("./signout-content"),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Loading...</h2>
+          <p>Please wait while we prepare sign-out options</p>
+        </div>
+      </div>
+    )
+  }
+);
 
 export default function SignOutPage() {
-  return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold">Loading...</h2>
-        <p>Please wait while we prepare sign-out options</p>
-      </div>
-    </div>}>
-      <SignOutContent />
-    </Suspense>
-  );
+  return <SignOutContentWithSearchParams />;
 } 
