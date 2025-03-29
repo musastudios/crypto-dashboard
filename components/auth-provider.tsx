@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabaseClient } from "@/lib/supabase-auth";
+import { usePathname, useRouter } from "next/navigation";
 
 type AuthContextType = {
   user: User | null;
@@ -18,56 +19,60 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+function RouteChangeListener({ onRouteChange }: { onRouteChange: () => void }) {
+  const pathname = usePathname();
+  useEffect(() => {
+    console.log("Route changed to:", pathname);
+    onRouteChange();
+  }, [pathname, onRouteChange]);
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
     try {
-      console.log("Refreshing user data...");
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      console.log("Session data:", session ? "Session active" : "No active session");
-      setUser(session?.user || null);
+      console.log("AuthProvider: Refreshing user data...");
+      const { data: { session }, error } = await supabaseClient.auth.refreshSession();
+      if (error) {
+        console.error("AuthProvider: Error refreshing session:", error.message);
+        const { data: fallbackData, error: fallbackError } = await supabaseClient.auth.getSession();
+        if (fallbackError) {
+          console.error("AuthProvider: Error getting session after refresh failed:", fallbackError.message);
+          setUser(null);
+        } else {
+          console.log("AuthProvider: Using fallback getSession. Session:", fallbackData.session ? "Active" : "No Session");
+          setUser(fallbackData.session?.user ?? null);
+        }
+      } else {
+        console.log("AuthProvider: Session refreshed. Session:", session ? "Active" : "No Session");
+        setUser(session?.user ?? null);
+      }
     } catch (error) {
-      console.error("Error refreshing user:", error);
+      console.error("AuthProvider: Unhandled error during refreshUser:", error);
       setUser(null);
     } finally {
-      setIsLoading(false);
+      if (isLoading) {
+        setIsLoading(false);
+      }
     }
-  }, []);
+  }, [isLoading]);
 
   useEffect(() => {
     console.log("Auth provider mounted");
     
-    // Get the current user on mount
-    const getInitialUser = async () => {
-      await refreshUser();
-    };
+    refreshUser();
 
-    getInitialUser();
-
-    // Set up the auth state listener
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event);
-        
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          console.log("User signed in or token refreshed");
-          setUser(session?.user || null);
-          setIsLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          console.log("User signed out");
-          setUser(null);
-          setIsLoading(false);
-        } else if (event === 'USER_UPDATED') {
-          console.log("User updated");
-          setUser(session?.user || null);
-          setIsLoading(false);
-        }
+        console.log("AuthProvider: Auth state changed:", event, "Session:", session ? "Present" : "Null");
+        setUser(session?.user ?? null);
+        setIsLoading(false);
       }
     );
 
-    // Clean up the subscription
     return () => {
       console.log("Auth provider unmounting, cleaning up subscription");
       subscription.unsubscribe();
@@ -83,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      <RouteChangeListener onRouteChange={refreshUser} />
     </AuthContext.Provider>
   );
 } 

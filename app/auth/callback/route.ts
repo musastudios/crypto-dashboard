@@ -12,54 +12,61 @@ export async function GET(request: NextRequest) {
     const next = requestUrl.searchParams.get("next") || "/";
     const isProd = process.env.NODE_ENV === 'production';
     
-    console.log(`Auth callback received (${isProd ? 'prod' : 'dev'}). Redirecting to: ${next}`);
+    console.log(`Auth callback received (${isProd ? 'prod' : 'dev'}). Code: ${code ? 'Present' : 'Missing'}. Redirecting to: ${next}`);
     console.log(`Full request URL: ${request.url}`);
     console.log(`Origin: ${requestUrl.origin}`);
 
     if (code) {
-      console.log("Auth code received, exchanging for session");
+      console.log("Auth code received, exchanging for session...");
       const cookieStore = cookies();
       const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
       
       // Exchange the code for a session
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       
-      if (error) {
-        console.error("Error exchanging code for session:", error.message);
-        console.error("Error details:", JSON.stringify(error));
-        
+      if (exchangeError) {
+        console.error("Error exchanging code for session:", exchangeError.message);
+        console.error("Exchange Error details:", JSON.stringify(exchangeError));
         // Redirect to error page if code exchange fails
-        return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(error.message)}`, requestUrl.origin));
+        return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin));
       }
       
-      console.log("Session established successfully");
+      console.log("Session exchange successful. Session data received:", !!sessionData);
+      
+      // *** Add check for session *after* exchange ***
+      const { data: { session: postExchangeSession }, error: getSessionError } = await supabase.auth.getSession();
+      if (getSessionError) {
+          console.error("Callback: Error getting session immediately after exchange:", getSessionError.message);
+      } else {
+          console.log("Callback: Session state immediately after exchange:", postExchangeSession ? `User ${postExchangeSession.user.email}` : "No Session");
+      }
+      // *** End added check ***
       
       // Log cookie names for debugging (in a simpler way)
       if (!isProd) {
-        // Use request headers directly since they're more readily available
         const cookieHeader = request.headers.get('cookie');
         if (cookieHeader) {
-          console.log('Cookie header present with length:', cookieHeader.length);
-          // Just log that cookies exist, not their values for security
-          console.log('Cookie header contains supabase session:', 
+          console.log('Callback: Cookie header present with length:', cookieHeader.length);
+          console.log('Callback: Cookie header contains supabase session:', 
             cookieHeader.includes('sb-') ? 'Yes' : 'No');
         } else {
-          console.log('No cookies found in request');
+          console.log('Callback: No cookies found in request');
         }
       }
     } else {
-      console.log("No auth code provided in callback");
+      console.warn("Auth callback called without an authorization code.");
     }
 
     // Construct the final redirect URL
     const redirectUrl = new URL(next, requestUrl.origin);
-    console.log(`Redirecting to: ${redirectUrl.toString()}`);
+    console.log(`Callback: Attempting final redirect to: ${redirectUrl.toString()}`);
 
     // Redirect to the requested page or home
     return NextResponse.redirect(redirectUrl);
-  } catch (error) {
-    console.error("Unhandled error in auth callback:", error);
+
+  } catch (error: any) { // Add type annotation
+    console.error("Unhandled error in auth callback:", error?.message || error);
     // Redirect to error page on unhandled errors
-    return NextResponse.redirect(new URL("/auth/error", request.url));
+    return NextResponse.redirect(new URL(`/auth/error?message=Callback%20Error`, request.url));
   }
 } 
