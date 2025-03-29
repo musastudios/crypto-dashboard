@@ -2,9 +2,8 @@
 
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { createClient } from "@supabase/supabase-js";
-import { redirect } from "next/navigation";
 
-// Client-side Supabase instance
+// Client-side Supabase instance - using default options
 export const supabaseClient = createClientComponentClient();
 
 // Server-side admin Supabase instance
@@ -18,10 +17,20 @@ export const supabaseAdmin = (url: string, key: string) =>
 
 // Authentication functions
 export const signInWithGoogle = async (redirectTo = "/") => {
+  // Determine if we need a fully qualified redirect URL or just a relative path
+  const fullRedirectUrl = redirectTo.startsWith('http') 
+    ? redirectTo 
+    : `${window.location.origin}${redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`}`;
+  
+  console.log(`Signing in with Google, redirecting to: ${fullRedirectUrl}`);
+  
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      queryParams: {
+        prompt: 'select_account' // Always show account selector
+      }
     },
   });
   
@@ -34,10 +43,17 @@ export const signInWithGoogle = async (redirectTo = "/") => {
 };
 
 export const signInWithTwitter = async (redirectTo = "/") => {
+  // Determine if we need a fully qualified redirect URL or just a relative path
+  const fullRedirectUrl = redirectTo.startsWith('http') 
+    ? redirectTo 
+    : `${window.location.origin}${redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`}`;
+  
+  console.log(`Signing in with Twitter, redirecting to: ${fullRedirectUrl}`);
+  
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: "twitter",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
     },
   });
   
@@ -50,6 +66,7 @@ export const signInWithTwitter = async (redirectTo = "/") => {
 };
 
 export const signOut = async () => {
+  console.log("Signing out...");
   const { error } = await supabaseClient.auth.signOut();
   
   if (error) {
