@@ -80,6 +80,28 @@ type CryptoDataContextType = {
 
 const CryptoDataContext = createContext<CryptoDataContextType | undefined>(undefined)
 
+// Add this interface for the Papa.parse results
+interface CSVRow {
+  Pairs: string;
+  Time: string;
+  Side: string;
+  "Filled Price": string | number;
+  "Executed Amount": string | number;
+  Total: string | number;
+  Fee: string | number;
+  Role?: string;
+  [key: string]: any;
+}
+
+// Add this interface for the trading pairs data
+interface TradingPairData {
+  symbol: string;
+  base_currency: string;
+  quote_currency: string;
+  id?: number;
+  [key: string]: any;
+}
+
 export function CryptoDataProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession()
   const userId = session?.user?.id
@@ -113,23 +135,25 @@ export function CryptoDataProvider({ children }: { children: ReactNode }) {
 
   const loadTradingPairs = async (): Promise<void> => {
     try {
-      const { data, error } = await supabase.from("trading_pairs").select("*").order("symbol")
+      const { data, error } = await supabase.from("trading_pairs").select("*").order("symbol");
 
       if (error) {
-        console.error("Error loading trading pairs:", error)
-        return
+        console.error("Error loading trading pairs:", error);
+        return;
       }
 
-      setTradingPairs(data || [])
+      // Ensure data is properly typed
+      const typedData = data as TradingPair[];
+      setTradingPairs(typedData || []);
 
       // If we have pairs but no active pair, set the first one as active
-      if (data && data.length > 0 && !activePair) {
-        setActivePair(data[0].symbol)
+      if (typedData && typedData.length > 0 && !activePair) {
+        setActivePair(typedData[0].symbol);
       }
     } catch (error) {
-      console.error("Error loading trading pairs:", error)
+      console.error("Error loading trading pairs:", error);
     }
-  }
+  };
 
   const loadFromDatabase = async (pairSymbol?: string): Promise<void> => {
     setIsLoadingFromDB(true)
@@ -154,9 +178,12 @@ export function CryptoDataProvider({ children }: { children: ReactNode }) {
         query = query.eq("trading_pairs.symbol", pairSymbol)
       }
 
-      // Filter by user_id if available
+      // If user is authenticated, filter by their user_id
       if (userId) {
         query = query.eq("user_id", userId)
+      } else {
+        // If no user, still allow access to public data
+        query = query.is("user_id", null)
       }
 
       const { data, error } = await query
@@ -300,32 +327,33 @@ export function CryptoDataProvider({ children }: { children: ReactNode }) {
 
   const loadCSV = async (file: File): Promise<void> => {
     return new Promise((resolve, reject) => {
-      Papa.parse(file, {
+      Papa.parse<CSVRow>(file, {
         header: true,
         complete: (results) => {
           try {
             // Process and validate the data
             const parsedData = results.data
-              .filter((item) => item && typeof item === "object")
+              .filter((item): item is CSVRow => item && typeof item === "object")
               .map((item) => {
                 // Ensure numeric fields are properly converted
-                const filledPrice = Number.parseFloat(item["Filled Price"] as string) || 0
-                const total = Number.parseFloat(item["Total"] as string) || 0
-                const fee = Number.parseFloat(item["Fee"] as string) || 0
+                const filledPrice = Number.parseFloat(String(item["Filled Price"])) || 0;
+                const total = Number.parseFloat(String(item["Total"])) || 0;
+                const fee = Number.parseFloat(String(item["Fee"])) || 0;
 
                 return {
                   ...item,
                   "Filled Price": filledPrice,
                   Total: total,
                   Fee: fee,
-                } as Transaction
-              })
+                  Side: item.Side as "Buy" | "Sell"
+                } as Transaction;
+              });
 
-            setTransactions(parsedData)
+            setTransactions(parsedData);
 
             // Set active pair from the first transaction
             if (parsedData.length > 0) {
-              setActivePair(parsedData[0].Pairs)
+              setActivePair(parsedData[0].Pairs);
             }
 
             // Track the uploaded file
@@ -335,24 +363,25 @@ export function CryptoDataProvider({ children }: { children: ReactNode }) {
               type: file.type,
               rows: parsedData.length,
               uploadedAt: new Date().toISOString(),
-            })
+            });
 
-            resolve()
+            resolve();
           } catch (error) {
-            console.error("Error processing CSV data:", error)
-            reject(error)
+            console.error("Error processing CSV data:", error);
+            reject(error);
           }
         },
         error: (error) => {
-          console.error("Error parsing CSV:", error)
-          reject(error)
+          console.error("Error parsing CSV:", error);
+          reject(error);
         },
-      })
-    })
-  }
+      });
+    });
+  };
 
   const saveToDatabase = async () => {
     if (!hasData) return { success: false, error: "No data to save" }
+    if (!userId) return { success: false, error: "You must be logged in to save data" }
 
     setIsSaving(true)
     try {
