@@ -8,6 +8,7 @@ import { UploadTab } from "@/components/tabs/upload-tab"
 import { StorageTab } from "@/components/tabs/storage-tab"
 import { useCryptoData } from "@/components/crypto-data-provider"
 import { useTabContext } from "@/hooks/use-tab-context"
+import { UserProfile } from "@/components/user-profile"
 
 export function DashboardContent() {
   const { activeTab, setActiveTab } = useTabContext()
@@ -16,7 +17,7 @@ export function DashboardContent() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
+        <header className="flex h-14 items-center justify-between gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="transactions" disabled={!hasData}>
@@ -28,6 +29,7 @@ export function DashboardContent() {
             <TabsTrigger value="upload">Upload Data</TabsTrigger>
             <TabsTrigger value="storage">Storage</TabsTrigger>
           </TabsList>
+          <UserProfile />
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">

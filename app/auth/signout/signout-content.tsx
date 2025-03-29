@@ -1,19 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut } from "lucide-react";
+import { signOut } from "@/lib/supabase-auth";
+import { toast } from "sonner";
 
 // This is imported dynamically with { ssr: false } to prevent the Suspense error
 export default function SignOutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl });
+    try {
+      setIsLoading(true);
+      await signOut();
+      // Redirect handled by signOut function
+    } catch (error) {
+      console.error("Sign out failed:", error);
+      toast.error("Failed to sign out. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -34,11 +45,26 @@ export default function SignOutContent() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <Button onClick={handleCancel} variant="outline">
+            <Button 
+              onClick={handleCancel} 
+              variant="outline"
+              disabled={isLoading}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSignOut} variant="destructive">
-              Sign Out
+            <Button 
+              onClick={handleSignOut} 
+              variant="destructive"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center">
+                  <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-current rounded-full"></span>
+                  Signing out...
+                </div>
+              ) : (
+                "Sign Out"
+              )}
             </Button>
           </div>
         </CardContent>

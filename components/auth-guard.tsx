@@ -1,21 +1,19 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
-  const isLoading = status === "loading";
-  const isUnauthenticated = status === "unauthenticated";
-
+  
   useEffect(() => {
-    if (!isLoading && isUnauthenticated) {
+    if (!isLoading && !user) {
       router.push("/auth/signin");
     }
-  }, [isLoading, isUnauthenticated, router]);
+  }, [isLoading, user, router]);
 
   if (isLoading) {
     return (
@@ -26,7 +24,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 

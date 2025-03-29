@@ -30,7 +30,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { useCryptoData } from "@/components/crypto-data-provider"
 import { Button } from "@/components/ui/button"
 import { useTabContext } from "@/hooks/use-tab-context"
-import { AuthButton } from "@/components/auth/auth-button"
+import { UserProfile } from "@/components/user-profile"
 
 export function DashboardSidebar() {
   const { activePair, refreshCurrentPrice, isLoadingPrice } = useCryptoData()
@@ -44,7 +44,7 @@ export function DashboardSidebar() {
             <CandlestickChart className="h-6 w-6" />
             <span className="text-xl font-bold">Crypto Analytics</span>
           </div>
-          <AuthButton />
+          <UserProfile />
         </div>
         <div className="flex items-center justify-between">
           <div className="text-xs text-muted-foreground">
