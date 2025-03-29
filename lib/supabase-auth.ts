@@ -3,6 +3,14 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { createClient } from "@supabase/supabase-js";
 
+// Ensure NEXT_PUBLIC_APP_URL is defined
+const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+if (!appUrl) {
+  console.error("Error: NEXT_PUBLIC_APP_URL environment variable is not set.");
+  // Optionally throw an error or provide a default for local dev, but failing fast is often better
+  // throw new Error("Missing NEXT_PUBLIC_APP_URL environment variable");
+}
+
 // Client-side Supabase instance - using default options
 export const supabaseClient = createClientComponentClient();
 
@@ -15,19 +23,18 @@ export const supabaseAdmin = (url: string, key: string) =>
     }
   });
 
+// Construct the base callback URL
+const authCallbackUrl = `${appUrl || 'http://localhost:3000'}/auth/callback`;
+
 // Authentication functions
 export const signInWithGoogle = async (redirectTo = "/") => {
-  // Determine if we need a fully qualified redirect URL or just a relative path
-  const fullRedirectUrl = redirectTo.startsWith('http') 
-    ? redirectTo 
-    : `${window.location.origin}${redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`}`;
-  
-  console.log(`Signing in with Google, redirecting to: ${fullRedirectUrl}`);
+  console.log(`Google SignIn: Redirecting AFTER auth to: ${redirectTo}`);
+  console.log(`Google SignIn: Using callback URL: ${authCallbackUrl}`);
   
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      redirectTo: `${authCallbackUrl}?next=${encodeURIComponent(redirectTo)}`,
       queryParams: {
         prompt: 'select_account' // Always show account selector
       }
@@ -35,7 +42,7 @@ export const signInWithGoogle = async (redirectTo = "/") => {
   });
   
   if (error) {
-    console.error("Error signing in with Google:", error);
+    console.error("Error initiating Google sign in:", error);
     throw error;
   }
   
@@ -43,22 +50,18 @@ export const signInWithGoogle = async (redirectTo = "/") => {
 };
 
 export const signInWithTwitter = async (redirectTo = "/") => {
-  // Determine if we need a fully qualified redirect URL or just a relative path
-  const fullRedirectUrl = redirectTo.startsWith('http') 
-    ? redirectTo 
-    : `${window.location.origin}${redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`}`;
-  
-  console.log(`Signing in with Twitter, redirecting to: ${fullRedirectUrl}`);
+  console.log(`Twitter SignIn: Redirecting AFTER auth to: ${redirectTo}`);
+  console.log(`Twitter SignIn: Using callback URL: ${authCallbackUrl}`);
   
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: "twitter",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      redirectTo: `${authCallbackUrl}?next=${encodeURIComponent(redirectTo)}`,
     },
   });
   
   if (error) {
-    console.error("Error signing in with Twitter:", error);
+    console.error("Error initiating Twitter sign in:", error);
     throw error;
   }
   
