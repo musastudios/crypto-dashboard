@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import TwitterProvider from "next-auth/providers/twitter";
 import { IntegratedSupabaseAdapter } from "./integrated-supabase-adapter";
 
 export const authOptions: NextAuthOptions = {
@@ -15,10 +16,15 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
+    TwitterProvider({
+      clientId: process.env.TWITTER_CLIENT_ID as string,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET as string,
+      version: "2.0",
+    }),
   ],
   adapter: IntegratedSupabaseAdapter({
-    url: process.env.SUPABASE_URL!,
-    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    url: process.env.SUPABASE_URL as string,
+    secret: process.env.SUPABASE_SERVICE_ROLE_KEY as string,
   }),
   session: {
     strategy: "jwt",

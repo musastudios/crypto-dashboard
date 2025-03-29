@@ -18,10 +18,16 @@ NEXTAUTH_SECRET=s9a9bHYnjpV34EmRgPXYMFvM+Vfdw3KfOQJsOgux/Ew=
 GOOGLE_CLIENT_ID=1023044498320-iqvlovlp7i52hohhtk60p9p278fomoci.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=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
 
+# Twitter OAuth
+TWITTER_CLIENT_ID=Y3VFSFRYcTZjVlBnSy03QWlzUng6MTpjaQ
+TWITTER_CLIENT_SECRET=M8fIljjR_WyuJW875353RyyNBvf7B9EXIzbhX8XA1UiuNKIvNK
+
 COINAPI_API_KEY=a175c799-be64-4bad-939a-75c868976754
 ```
 
-## Google OAuth Setup
+## OAuth Setup
+
+### Google OAuth
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Navigate to your project and go to "APIs & Services" > "Credentials"
@@ -29,6 +35,17 @@ COINAPI_API_KEY=a175c799-be64-4bad-939a-75c868976754
 4. Add the following authorized redirect URIs:
    - `https://crypto-dashboard-olive.vercel.app/api/auth/callback/google`
    - `http://localhost:3001/api/auth/callback/google`
+
+### Twitter OAuth
+
+1. Go to the [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard)
+2. Navigate to your project settings
+3. Add the following authorized callback URLs:
+   - `https://crypto-dashboard-olive.vercel.app/api/auth/callback/twitter`
+   - `http://localhost:3001/api/auth/callback/twitter`
+4. Make sure your app has the following permissions:
+   - Read access
+   - Email address access
 
 ## Supabase Schema Setup
 
@@ -49,5 +66,5 @@ Before the first login, you need to set up the Supabase database schema:
 ## Testing
 
 1. Visit the deployed application
-2. Try signing in with Google
+2. Try signing in with Google or Twitter
 3. Check that you are successfully redirected back to the application after authentication 
