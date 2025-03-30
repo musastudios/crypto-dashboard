@@ -84,15 +84,14 @@ export function UserProfile() {
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {/* Example: Settings Link 
+        {/* Settings Link */}
         <DropdownMenuItem asChild>
-          <Link href="/settings">
+          <Link href="/settings" className="cursor-pointer">
              <Settings className="mr-2 h-4 w-4" />
              <span>Settings</span>
            </Link>
          </DropdownMenuItem> 
          <DropdownMenuSeparator /> 
-        */}
         <DropdownMenuItem 
           onClick={handleSignOut} 
           disabled={isSigningOut} 
