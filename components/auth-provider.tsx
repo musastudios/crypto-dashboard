@@ -11,7 +11,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  signIn: (provider: 'google' | 'twitter') => Promise<void>;
+  signIn: (provider: 'google' | 'twitter', callbackUrl?: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN') {
         // Redirect after sign in if on the sign-in page
         if (pathname === '/auth/signin') {
-          router.push('/');
+          router.push('/dashboard');
         }
       } else if (event === 'SIGNED_OUT') {
         // Redirect to sign in page after sign out
@@ -87,12 +87,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, router, pathname]);
 
   // Sign in with OAuth provider
-  async function signIn(provider: 'google' | 'twitter') {
+  async function signIn(provider: 'google' | 'twitter', callbackUrl?: string) {
     try {
+      // Use the provided callbackUrl or default to dashboard
+      const redirectPath = callbackUrl || '/dashboard';
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
         },
       });
 

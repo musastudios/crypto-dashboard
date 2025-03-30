@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/"; 
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"; 
   const error = searchParams.get("error"); // Errors can be passed as query params
   const [isLoading, setIsLoading] = useState<'google' | 'twitter' | null>(null);
   const { signIn } = useAuth();
@@ -18,7 +18,7 @@ export default function SignInContent() {
   const handleSignIn = async (provider: 'google' | 'twitter') => {
     try {
       setIsLoading(provider);
-      await signIn(provider);
+      await signIn(provider, callbackUrl);
       // The redirect is handled automatically by Supabase Auth
     } catch (error) {
       console.error(`${provider} sign in initiation failed:`, error);
