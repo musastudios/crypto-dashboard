@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut } from "lucide-react";
-import { signOut } from "@/lib/supabase-auth";
+import { LogOut, Loader2 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 
 // This is imported dynamically with { ssr: false } to prevent the Suspense error
@@ -18,14 +18,8 @@ export default function SignOutContent() {
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
-      const result = await signOut();
-      if (result.success) {
-        // Force router refresh to update auth state
-        router.refresh();
-        // Redirect to home page
-        router.push("/");
-        toast.success("Successfully signed out");
-      }
+      await signOut({ callbackUrl: callbackUrl, redirect: true });
+      toast.success("Successfully signed out");
     } catch (error) {
       console.error("Sign out failed:", error);
       toast.error("Failed to sign out. Please try again.");
@@ -64,8 +58,8 @@ export default function SignOutContent() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <div className="flex items-center">
-                  <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-current rounded-full"></span>
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing out...
                 </div>
               ) : (

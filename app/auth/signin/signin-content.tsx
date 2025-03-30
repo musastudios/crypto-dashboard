@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CandlestickChart } from "lucide-react";
-import { signInWithGoogle, signInWithTwitter } from "@/lib/supabase-auth";
+import { CandlestickChart, Loader2 } from "lucide-react";
+import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 
 // This is imported dynamically with { ssr: false } to prevent the Suspense error
@@ -13,26 +13,15 @@ export default function SignInContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const error = searchParams.get("error");
-  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<'google' | 'twitter' | null>(null);
 
-  const handleGoogleSignIn = async () => {
+  const handleSignIn = async (provider: 'google' | 'twitter') => {
     try {
-      setIsLoading("google");
-      await signInWithGoogle(callbackUrl);
+      setIsLoading(provider);
+      await signIn(provider, { callbackUrl: callbackUrl, redirect: true });
     } catch (error) {
-      console.error("Google sign in failed:", error);
-      toast.error("Google sign in failed. Please try again.");
-      setIsLoading(null);
-    }
-  };
-
-  const handleTwitterSignIn = async () => {
-    try {
-      setIsLoading("twitter");
-      await signInWithTwitter(callbackUrl);
-    } catch (error) {
-      console.error("Twitter sign in failed:", error);
-      toast.error("Twitter sign in failed. Please try again.");
+      console.error(`${provider} sign in failed:`, error);
+      toast.error(`${provider} sign in failed. Please try again.`);
       setIsLoading(null);
     }
   };
@@ -50,24 +39,22 @@ export default function SignInContent() {
           </CardDescription>
           {error && (
             <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-              {error === "OAuthAccountNotLinked"
-                ? "This account is already linked to another provider."
-                : "An error occurred during sign in. Please try again."}
+              {`Sign in failed: ${error}. Please try again.`}
             </div>
           )}
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid grid-cols-1 gap-3">
             <Button
-              onClick={handleGoogleSignIn}
+              onClick={() => handleSignIn('google')}
               className="w-full"
               variant="outline"
               disabled={isLoading !== null}
             >
               {isLoading === "google" ? (
-                <div className="flex items-center">
-                  <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-current rounded-full"></span>
-                  Signing in...
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Redirecting...
                 </div>
               ) : (
                 <>
@@ -99,15 +86,15 @@ export default function SignInContent() {
             </Button>
 
             <Button
-              onClick={handleTwitterSignIn}
+              onClick={() => handleSignIn('twitter')}
               className="w-full"
               variant="outline"
               disabled={isLoading !== null}
             >
               {isLoading === "twitter" ? (
-                <div className="flex items-center">
-                  <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-current rounded-full"></span>
-                  Signing in...
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Redirecting...
                 </div>
               ) : (
                 <>
@@ -117,7 +104,7 @@ export default function SignInContent() {
                     viewBox="0 0 24 24"
                   >
                     <path 
-                      fill="#000000" 
+                      fill="currentColor" 
                       d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
                     />
                   </svg>

@@ -2,8 +2,6 @@
 
 A comprehensive dashboard for analyzing cryptocurrency trading data, with Supabase integration for data storage and retrieval.
 
-![Dashboard Preview](/placeholder.svg?height=400&width=800)
-
 ## 🚀 Introduction
 
 Crypto Trading Analytics Dashboard is a powerful tool for crypto traders to analyze their transaction history, monitor price trends, calculate profits, and make data-driven trading decisions. The application integrates with Supabase for reliable data storage and features a responsive, dark-mode compatible UI built with Next.js and Tailwind CSS.
