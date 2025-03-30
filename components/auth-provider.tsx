@@ -164,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Store the destination to redirect to after login
       if (callbackUrl) {
-        sessionStorage.setItem('redirectAfterLogin', callbackUrl);
+        window.sessionStorage.setItem('redirectAfterLogin', callbackUrl);
       }
       
       // Use the provided callbackUrl or default to dashboard

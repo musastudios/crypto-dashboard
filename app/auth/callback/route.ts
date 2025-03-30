@@ -6,6 +6,12 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') || '/dashboard'
 
+  console.log('Auth callback route called:', { 
+    hasCode: !!code, 
+    redirectTarget: next,
+    url: request.url,
+  })
+
   // If we don't have a code, redirect to the sign-in page
   if (!code) {
     console.error('No code parameter found in callback URL')
@@ -20,7 +26,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
-      console.error('Error exchanging code for session:', error.message)
+      console.error('Error exchanging code for session:', error.message, error)
       return NextResponse.redirect(`${origin}/auth/signin?error=${encodeURIComponent(error.message)}`)
     }
 
@@ -29,7 +35,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/auth/signin?error=Authentication failed`)
     }
 
-    console.log('Authentication successful, session established')
+    console.log('Authentication successful, session established', {
+      userId: data.session.user.id,
+      email: data.session.user.email,
+    })
     
     // After successful auth, add cache-busting query parameter to prevent browser caching
     // This ensures the dashboard loads with the latest auth state
@@ -39,10 +48,13 @@ export async function GET(request: NextRequest) {
     console.log('Redirecting to:', redirectUrl)
     
     // Use 303 See Other to ensure a GET request regardless of the original request method
+    // Add additional security headers to force a fresh page load
     return NextResponse.redirect(redirectUrl, { 
       status: 303,
       headers: {
-        'Cache-Control': 'no-store, max-age=0'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     })
   } catch (err) {
