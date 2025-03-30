@@ -42,69 +42,119 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const supabase = getSupabaseBrowserClient();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Special debug function to help diagnose auth issues
+  const logAuthDebug = (message: string, data?: any) => {
+    console.log(`[AUTH DEBUG] ${message}`, data || '');
+  };
 
   // Setup Supabase auth state listener
   useEffect(() => {
     // Set initial loading state
     setIsLoading(true);
+    logAuthDebug('Auth provider initializing', { pathname });
 
     // Store the "intended destination" route
-    const storedRedirectPath = sessionStorage.getItem('redirectAfterLogin');
+    const storedRedirectPath = window.sessionStorage.getItem('redirectAfterLogin');
+    logAuthDebug('Found stored redirect path', storedRedirectPath || 'none');
     
-    // Get the initial session
+    // Force a check for an existing session
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
+      logAuthDebug('Initial session check', { 
+        hasSession: !!session, 
+        user: session?.user?.email || 'none'
+      });
+
       setSession(session);
       setUser(session?.user ?? null);
       
-      // If the user is authenticated and we have a stored redirect path, navigate there
-      if (session?.user && storedRedirectPath && pathname !== storedRedirectPath) {
-        console.log('Redirecting to stored path:', storedRedirectPath);
-        router.push(storedRedirectPath);
-        sessionStorage.removeItem('redirectAfterLogin');
+      // Flag that we've completed initial auth check
+      setAuthInitialized(true);
+      
+      // Handle redirect logic only after we have determined the session state
+      if (session?.user) {
+        logAuthDebug('User is authenticated');
+        
+        // User is logged in - determine where to send them
+        if (pathname === '/auth/signin') {
+          // If on login page, send to dashboard or stored path
+          const targetPath = storedRedirectPath || '/dashboard';
+          logAuthDebug(`Redirecting from sign-in to ${targetPath}`);
+          setTimeout(() => router.push(targetPath), 100);
+          if (storedRedirectPath) {
+            window.sessionStorage.removeItem('redirectAfterLogin');
+          }
+        } else if (storedRedirectPath && pathname !== storedRedirectPath) {
+          // If we have a stored path and we're not on it, go there
+          logAuthDebug(`Redirecting to stored path: ${storedRedirectPath}`);
+          setTimeout(() => router.push(storedRedirectPath), 100);
+          window.sessionStorage.removeItem('redirectAfterLogin');
+        }
+      } else {
+        // No user session found
+        logAuthDebug('No authenticated user found');
+        
+        // If on a protected route, redirect to sign-in
+        if (pathname !== '/auth/signin' && pathname !== '/' && pathname !== '/auth/callback') {
+          logAuthDebug(`Redirecting to sign-in from ${pathname}`);
+          window.sessionStorage.setItem('redirectAfterLogin', pathname);
+          setTimeout(() => router.push('/auth/signin'), 100);
+        }
       }
       
       setIsLoading(false);
+    }).catch((err: Error) => {
+      logAuthDebug('Error checking session', err);
+      setIsLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-      console.log("Supabase auth event:", event);
-      setSession(session);
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
+      logAuthDebug('Auth state change event', { event, hasSession: !!newSession });
       
-      // Handle specific auth events
+      // Update our state with the new session
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      
+      // Handle redirect logic based on the auth event
       if (event === 'SIGNED_IN') {
+        logAuthDebug('SIGNED_IN event fired');
+        
         // If we have a stored redirect path, use it
-        const storedPath = sessionStorage.getItem('redirectAfterLogin');
-        if (storedPath) {
-          console.log('Auth state change: redirecting to stored path:', storedPath);
-          router.push(storedPath);
-          sessionStorage.removeItem('redirectAfterLogin');
-        } 
-        // If on sign-in page, redirect to dashboard
-        else if (pathname === '/auth/signin') {
-          console.log('Auth state change: redirecting to dashboard from sign-in page');
-          router.push('/dashboard');
+        const storedPath = window.sessionStorage.getItem('redirectAfterLogin');
+        const targetPath = storedPath || '/dashboard';
+        
+        // Delay the redirect slightly to ensure state updates first
+        setTimeout(() => {
+          logAuthDebug(`Redirecting after sign-in to ${targetPath}`);
+          router.push(targetPath);
+          if (storedPath) {
+            window.sessionStorage.removeItem('redirectAfterLogin');
+          }
+        }, 200);
+      } 
+      else if (event === 'SIGNED_OUT') {
+        logAuthDebug('SIGNED_OUT event fired');
+        
+        // Before redirecting to sign-in, store the current path
+        if (pathname !== '/auth/signin' && pathname !== '/' && pathname !== '/auth/callback') {
+          window.sessionStorage.setItem('redirectAfterLogin', pathname);
         }
-      } else if (event === 'SIGNED_OUT') {
-        // Before redirecting to sign-in, store the current path if it's not the sign-in page
-        if (pathname !== '/auth/signin' && pathname !== '/') {
-          sessionStorage.setItem('redirectAfterLogin', pathname);
-        }
-        // Redirect to sign in page after sign out
-        router.push('/auth/signin');
+        
+        // Redirect to sign-in page after sign-out
+        setTimeout(() => router.push('/auth/signin'), 100);
       }
-      
-      setIsLoading(false);
     });
 
-    // Cleanup subscription
+    // Cleanup subscription on unmount
     return () => {
+      logAuthDebug('Cleaning up auth subscription');
       subscription.unsubscribe();
     };
   }, [supabase, router, pathname]);
@@ -153,13 +203,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     session,
-    isLoading,
+    isLoading: isLoading || !authInitialized,
     signIn,
     signOut,
   };
 
   // Show loading state if the auth state is loading
-  if (isLoading) {
+  if (isLoading || !authInitialized) {
     return <AuthLoader />;
   }
 

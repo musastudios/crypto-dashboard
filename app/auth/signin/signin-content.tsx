@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CandlestickChart, Loader2 } from "lucide-react";
@@ -10,15 +10,36 @@ import { toast } from "sonner";
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"; 
   const error = searchParams.get("error"); // Errors can be passed as query params
   const [isLoading, setIsLoading] = useState<'google' | 'twitter' | null>(null);
-  const { signIn } = useAuth();
+  const { user, signIn, isLoading: authLoading } = useAuth();
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      console.log('[SIGNIN] User already authenticated, redirecting to dashboard');
+      router.push('/dashboard');
+    }
+  }, [user, authLoading, router]);
+
+  // Store the callback URL when it changes
+  useEffect(() => {
+    if (callbackUrl && callbackUrl !== '/dashboard' && callbackUrl !== '/') {
+      console.log('[SIGNIN] Storing callback URL:', callbackUrl);
+      window.sessionStorage.setItem('redirectAfterLogin', callbackUrl);
+    }
+  }, [callbackUrl]);
 
   const handleSignIn = async (provider: 'google' | 'twitter') => {
     try {
       setIsLoading(provider);
+      console.log(`[SIGNIN] Initiating ${provider} sign-in, callback: ${callbackUrl}`);
+      
+      // Pass the callback URL to the signIn function
       await signIn(provider, callbackUrl);
+      
       // The redirect is handled automatically by Supabase Auth
     } catch (error) {
       console.error(`${provider} sign in initiation failed:`, error);
@@ -26,6 +47,16 @@ export default function SignInContent() {
       setIsLoading(null);
     }
   };
+
+  // If already authenticated, show loading
+  if (user || authLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-2 text-lg">Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
