@@ -51,10 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set initial loading state
     setIsLoading(true);
 
+    // Store the "intended destination" route
+    const storedRedirectPath = sessionStorage.getItem('redirectAfterLogin');
+    
     // Get the initial session
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // If the user is authenticated and we have a stored redirect path, navigate there
+      if (session?.user && storedRedirectPath && pathname !== storedRedirectPath) {
+        console.log('Redirecting to stored path:', storedRedirectPath);
+        router.push(storedRedirectPath);
+        sessionStorage.removeItem('redirectAfterLogin');
+      }
+      
       setIsLoading(false);
     });
 
@@ -68,11 +79,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Handle specific auth events
       if (event === 'SIGNED_IN') {
-        // Redirect after sign in if on the sign-in page
-        if (pathname === '/auth/signin') {
+        // If we have a stored redirect path, use it
+        const storedPath = sessionStorage.getItem('redirectAfterLogin');
+        if (storedPath) {
+          console.log('Auth state change: redirecting to stored path:', storedPath);
+          router.push(storedPath);
+          sessionStorage.removeItem('redirectAfterLogin');
+        } 
+        // If on sign-in page, redirect to dashboard
+        else if (pathname === '/auth/signin') {
+          console.log('Auth state change: redirecting to dashboard from sign-in page');
           router.push('/dashboard');
         }
       } else if (event === 'SIGNED_OUT') {
+        // Before redirecting to sign-in, store the current path if it's not the sign-in page
+        if (pathname !== '/auth/signin' && pathname !== '/') {
+          sessionStorage.setItem('redirectAfterLogin', pathname);
+        }
         // Redirect to sign in page after sign out
         router.push('/auth/signin');
       }
@@ -89,6 +112,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign in with OAuth provider
   async function signIn(provider: 'google' | 'twitter', callbackUrl?: string) {
     try {
+      // Store the destination to redirect to after login
+      if (callbackUrl) {
+        sessionStorage.setItem('redirectAfterLogin', callbackUrl);
+      }
+      
       // Use the provided callbackUrl or default to dashboard
       const redirectPath = callbackUrl || '/dashboard';
       
