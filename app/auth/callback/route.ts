@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('Callback route: Exchanging code for session')
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Exchange the code for a session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)

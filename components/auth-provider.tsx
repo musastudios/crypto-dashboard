@@ -167,13 +167,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.sessionStorage.setItem('redirectAfterLogin', callbackUrl);
       }
       
-      // Use the provided callbackUrl or default to dashboard
-      const redirectPath = callbackUrl || '/dashboard';
+      // Determine the callback URL
+      const redirectTo = new URL('/auth/callback', window.location.origin);
+      redirectTo.searchParams.set('next', callbackUrl || '/dashboard');
+      
+      logAuthDebug(`Initiating OAuth flow with provider: ${provider}`, { redirectTo: redirectTo.toString() });
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
+          redirectTo: redirectTo.toString(),
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         },
       });
 
