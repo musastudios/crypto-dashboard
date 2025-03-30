@@ -5,20 +5,21 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CandlestickChart, Loader2 } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { useAuth } from "@/components/auth-provider";
 import { toast } from "sonner";
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/"; 
-  const error = searchParams.get("error"); // NextAuth passes errors in this query param
+  const error = searchParams.get("error"); // Errors can be passed as query params
   const [isLoading, setIsLoading] = useState<'google' | 'twitter' | null>(null);
+  const { signIn } = useAuth();
 
   const handleSignIn = async (provider: 'google' | 'twitter') => {
     try {
       setIsLoading(provider);
-      // Use NextAuth's signIn. It handles redirects.
-      await signIn(provider, { callbackUrl: callbackUrl, redirect: true }); 
+      await signIn(provider);
+      // The redirect is handled automatically by Supabase Auth
     } catch (error) {
       console.error(`${provider} sign in initiation failed:`, error);
       toast.error(`${provider} sign in failed. Please try again.`);
@@ -39,10 +40,8 @@ export default function SignInContent() {
           </CardDescription>
           {error && (
             <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive mt-4">
-              {/* Provide user-friendly messages for common errors */}
-              {error === 'OAuthCallback' && 'Error processing sign in. Please try again.'}
-              {error === 'OAuthAccountNotLinked' && 'This email is linked via another provider. Try signing in with that provider.'}
-              {!['OAuthCallback', 'OAuthAccountNotLinked'].includes(error) && `Sign in failed: ${error}`}
+              {/* Display any errors from the auth process */}
+              {error}
             </div>
           )}
         </CardHeader>

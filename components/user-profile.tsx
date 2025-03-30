@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -27,16 +27,14 @@ const getUserInitials = (name?: string | null): string => {
 };
 
 export function UserProfile() {
-  const { data: session, status } = useSession();
+  const { user, signOut, isLoading } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const isLoading = status === "loading";
-  const user = session?.user;
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut({ callbackUrl: '/', redirect: true });
-      // toast.success("Successfully signed out"); // Toast might not show before redirect
+      await signOut();
+      // Toast might not show before redirect
     } catch (error) { 
       console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.");
@@ -50,7 +48,6 @@ export function UserProfile() {
 
   if (!user) {
     return (
-      // Link to the signin page defined in NextAuth options
       <Link href="/auth/signin">
         <Button variant="outline" size="sm">
           <LogIn className="mr-2 h-4 w-4" />
@@ -60,26 +57,34 @@ export function UserProfile() {
     );
   }
 
+  // Extract user info from the Supabase user object
+  const userEmail = user.email;
+  const userName = user.user_metadata?.full_name || 
+                   user.user_metadata?.name || 
+                   user.email?.split('@')[0] || 
+                   'User';
+  const userImage = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
   // Logged-in user view
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            {user.image ? (
-              <AvatarImage src={user.image} alt={user.name || "User avatar"} />
+            {userImage ? (
+              <AvatarImage src={userImage} alt={userName} />
             ) : (
-              <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
+              <AvatarFallback>{getUserInitials(userName)}</AvatarFallback>
             )}
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuItem className="flex flex-col items-start focus:bg-transparent cursor-default">
-          <span className="font-medium text-sm truncate" title={user.name || 'User'}>{user.name || "User"}</span>
-          {user.email && (
-            <span className="text-xs text-muted-foreground truncate" title={user.email}>
-              {user.email}
+          <span className="font-medium text-sm truncate" title={userName}>{userName}</span>
+          {userEmail && (
+            <span className="text-xs text-muted-foreground truncate" title={userEmail}>
+              {userEmail}
             </span>
           )}
         </DropdownMenuItem>

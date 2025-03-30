@@ -1,21 +1,20 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/auth-provider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname(); // Get current path
-  const isLoading = status === "loading";
-  const isUnauthenticated = status === "unauthenticated";
+  const isUnauthenticated = !isLoading && !user;
 
   useEffect(() => {
     // If not loading and user is not authenticated,
     // redirect to sign-in, preserving the intended destination
-    if (!isLoading && isUnauthenticated) {
+    if (isUnauthenticated) {
       console.log(`AuthGuard: Unauthenticated on ${pathname}. Redirecting to signin.`);
       // Pass the current path as callbackUrl
       const callbackUrl = encodeURIComponent(pathname || "/");
@@ -34,7 +33,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   // If authenticated, render the children
-  if (session) {
+  if (user) {
     return <>{children}</>;
   }
 
