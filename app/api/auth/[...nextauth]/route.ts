@@ -115,6 +115,30 @@ export const authOptions: AuthOptions = {
   },
   // Enable debug logs in development
   debug: process.env.NODE_ENV === 'development',
+  // Add detailed logger for debugging
+  logger: {
+    error(code, metadata) {
+      console.error(`NextAuth Error: ${code}`, metadata);
+    },
+    warn(code) {
+      console.warn(`NextAuth Warning: ${code}`);
+    },
+    debug(code, metadata) {
+      console.log(`NextAuth Debug: ${code}`, metadata);
+    }
+  },
+  // Add events for tracking auth flow
+  events: {
+    async signIn(message) {
+      console.log('NextAuth Event - Sign in attempt:', message);
+    },
+    async signOut(message) {
+      console.log('NextAuth Event - Sign out:', message);
+    },
+    async createUser(message) {
+      console.log('NextAuth Event - User created:', message);
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);

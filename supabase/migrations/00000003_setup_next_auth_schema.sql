@@ -101,4 +101,19 @@ GRANT ALL ON TABLE next_auth.verification_tokens TO postgres;
 GRANT ALL ON TABLE next_auth.verification_tokens TO service_role;
 
 -- Expose the schema to the API
-GRANT USAGE ON SCHEMA next_auth TO anon, authenticated, service_role; 
+GRANT USAGE ON SCHEMA next_auth TO anon, authenticated, service_role;
+
+-- Ensure ALL current and future tables in this schema are accessible
+GRANT ALL ON ALL TABLES IN SCHEMA next_auth TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA next_auth TO service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA next_auth TO service_role;
+
+-- Default privileges for future objects
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA next_auth 
+GRANT ALL ON TABLES TO service_role;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA next_auth 
+GRANT ALL ON SEQUENCES TO service_role;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA next_auth 
+GRANT ALL ON ROUTINES TO service_role; 
