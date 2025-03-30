@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/auth-provider";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,80 +11,83 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRouter } from "next/navigation";
+import { LogIn, LogOut, Settings, User as UserIcon, Loader2, AlertTriangle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { toast } from "sonner";
+
+// Helper to get initials
+const getUserInitials = (name?: string | null): string => {
+  if (!name) return "";
+  const nameParts = name.split(" ");
+  if (nameParts.length >= 2) {
+    return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
+  }
+  return name[0].toUpperCase();
+};
 
 export function UserProfile() {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const isLoading = status === "loading";
+  const user = session?.user;
 
-  // If loading, show a skeleton loader
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut({ callbackUrl: "/" }); // Redirect to home after sign out
+      toast.success("Successfully signed out");
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast.error("Failed to sign out. Please try again.");
+      setIsSigningOut(false); // Only reset if error occurs
+    }
+    // No need for finally block if navigation occurs on success
+  };
+
   if (isLoading) {
-    return (
-      <div className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div>
-        <div className="h-4 w-24 bg-muted animate-pulse rounded"></div>
-      </div>
-    );
+    return <Skeleton className="h-8 w-8 rounded-full" />;
   }
 
-  // If not logged in, show sign in button
   if (!user) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => router.push("/auth/signin")}
-      >
+      <Button onClick={() => signIn()} variant="outline" size="sm">
+        <LogIn className="mr-2 h-4 w-4" />
         Sign In
       </Button>
     );
   }
 
-  // Get user initials for avatar fallback
-  const getUserInitials = () => {
-    const name = user.user_metadata?.name || user.email || "";
-    if (name) {
-      const parts = name.split(" ");
-      if (parts.length > 1) {
-        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-      }
-      return name.substring(0, 2).toUpperCase();
-    }
-    return "U";
-  };
-
-  // Logged in user - show avatar and dropdown
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage
-              src={user.user_metadata?.avatar_url || user.user_metadata?.picture}
-              alt={user.user_metadata?.name || user.email || "User"}
-            />
-            <AvatarFallback>{getUserInitials()}</AvatarFallback>
+            {user.image ? (
+              <AvatarImage src={user.image} alt={user.name || "User avatar"} />
+            ) : (
+              <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
+            )}
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {user.user_metadata?.name || user.email?.split("@")[0]}
-            </p>
-            <p className="text-xs leading-none text-muted-foreground">
+        <DropdownMenuItem className="flex flex-col items-start">
+          <span className="font-medium text-sm">{user.name || "User"}</span>
+          {user.email && (
+            <span className="text-xs text-muted-foreground">
               {user.email}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/settings")}>
-          Settings
+            </span>
+          )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/auth/signout")}>
-          Sign out
+        <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+          {isSigningOut ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <LogOut className="mr-2 h-4 w-4" />
+          )}
+          <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

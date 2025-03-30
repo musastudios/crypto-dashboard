@@ -110,3 +110,85 @@ Here are 15-20 high-value features that would make your Crypto Trading Analytics
 19. Backtesting simulator to test strategies against historical data with AI-suggested improvements
 
 20. Trading psychology insights that analyze your emotional patterns in trading (FOMO, panic selling) based on your history
+
+# Authentication Setup (NextAuth.js + Supabase Adapter)
+
+This project uses NextAuth.js for authentication, leveraging Google and Twitter OAuth providers, with Supabase acting as the database backend via the `@auth/supabase-adapter`.
+
+## Setup Instructions
+
+### 1. Environment Variables
+
+Set the following environment variables. Use `.env.local` for local development and configure them in your deployment environment (e.g., Vercel) for production.
+
+```bash
+# Supabase connection (Adapter needs URL & Service Role Key)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_JWT_SECRET=your_supabase_project_jwt_secret # From Supabase Project Settings > API > JWT Settings
+
+# Application URL (Ensure consistency)
+NEXT_PUBLIC_APP_URL=http://localhost:3000 # Dev: http://localhost:3000, Prod: https://your-domain.com
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000 # Should match NEXT_PUBLIC_APP_URL
+NEXTAUTH_SECRET=generate_a_strong_secret # Use `openssl rand -base64 32`
+
+# OAuth Provider Credentials (Used by NextAuth API Route)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+TWITTER_CLIENT_ID=your_twitter_client_id
+TWITTER_CLIENT_SECRET=your_twitter_client_secret
+```
+
+See `.env.example` and `.env.production` for templates.
+
+**Note:** While `GOOGLE_CLIENT_SECRET` and `TWITTER_CLIENT_SECRET` are listed, they are used server-side within the NextAuth API route (`app/api/auth/[...nextauth]/route.ts`) and ideally should not be exposed elsewhere in your Next.js environment variables if possible (depends on deployment platform capabilities).
+
+### 2. Supabase Database Setup
+
+The `@auth/supabase-adapter` automatically creates the necessary tables (`users`, `accounts`, `sessions`, `verification_tokens`) in your Supabase public schema if they don't exist.
+
+However, if you previously created a `public.users` table for the Supabase Auth Helpers method, ensure its structure is compatible or consider removing it to let the adapter create its own.
+
+*(Optional)* If you want to keep syncing `auth.users` to a `public.users` table (e.g., for RLS policies), ensure the trigger (`handle_new_user` from the old SQL script) is still in place or adapt it.
+
+### 3. OAuth Provider Configuration (External)
+
+**CRITICAL:** Configure the **Redirect URIs** (or Callback URLs) in your Google and Twitter developer consoles to point to the NextAuth.js callback handler:
+
+*   **Google Cloud Console (OAuth 2.0 Client ID -> Authorized redirect URIs):**
+    *   `http://localhost:3000/api/auth/callback/google`
+    *   `https://your-production-domain.com/api/auth/callback/google`
+
+*   **Twitter Developer Portal (Your App -> Authentication Settings -> Callback URLs):**
+    *   `http://localhost:3000/api/auth/callback/twitter`
+    *   `https://your-production-domain.com/api/auth/callback/twitter`
+
+**Remove any old callback URLs** pointing to `/auth/callback` or Supabase's `/auth/v1/callback`.
+
+## Authentication Flow
+
+1.  User clicks "Sign In" (`signIn()` from `next-auth/react`).
+2.  User is redirected to the selected provider (Google/Twitter).
+3.  User authenticates with the provider.
+4.  Provider redirects back to the NextAuth callback (`/api/auth/callback/[provider]`).
+5.  The NextAuth API route (`app/api/auth/[...nextauth]/route.ts`) handles the code exchange, fetches/creates the user profile via the Supabase adapter, creates a session, and sets session cookies.
+6.  User is redirected back to the application (usually the page they started from or the root).
+7.  `useSession()` hook updates, and UI reflects the authenticated state.
+
+## Usage
+
+-   **Session Management:** Handled by `SessionProvider` (`app/layout.tsx`) and `useSession` hook.
+-   **Sign In/Out:** Use `signIn()` and `signOut()` from `next-auth/react` (see `components/UserProfile.tsx`).
+-   **Protected Routes:** Use the `AuthGuard` component (`components/auth-guard.tsx`), which uses `useSession` to check authentication status.
+
+## Troubleshooting
+
+-   **OAuth Errors (`redirect_uri_mismatch`, etc.):** Almost always an issue with the Redirect URIs configured in Google/Twitter not exactly matching the required NextAuth callback URLs (`/api/auth/callback/[provider]`). Check `.env` variables (`NEXTAUTH_URL`).
+-   **Missing JWT Secret:** Ensure `SUPABASE_JWT_SECRET` is correctly set.
+-   **Missing NextAuth Secret:** Ensure `NEXTAUTH_SECRET` is set.
+-   **Database Issues:** Check Supabase logs if the adapter fails to write user/session data.
+-   **Check Application Logs:** Look for errors in Vercel runtime logs or local terminal, especially from the `[...nextauth]` API route.
+-   **Clear Cookies:** Always clear browser cookies after configuration changes.
